@@ -1,0 +1,4 @@
+#Files to not track on git
+invalid_data.csv
+pipeline_sensors _error_log.csv
+valid_data.csv
