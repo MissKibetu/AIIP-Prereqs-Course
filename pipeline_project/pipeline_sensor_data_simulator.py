@@ -19,28 +19,18 @@ def invalid_sensor_cluster_data():
     sensor_data_with_error = sensorData[0:(x+1)]
     return  [datetime.datetime.now()] + sensor_data_with_error
 
-'''Function to simulate data generation and checking for the entire pipeline'''
+'''Function to simulate data generation. If there is an error, the last sensor to be checked is the one with the error.'''
 
 def pipeline_cluster_data():
     pipelineData = {}
 
     '''Randomize error generation in dataset. If x = 0, all sensors are ok'''
 
-    x = random.randint(0,1)  
+    x = random.randint(0,1)
     if x == 0:
         for i in range(1,33):
             pipelineData[i] = [i] + valid_sensor_cluster_data()
 
-        '''Write valid sensor values to csv file'''
-
-        w= open("valid_data.csv", "a", newline='')
-        writer = csv.writer(w)
-        for key, val in pipelineData.items():
-            writer.writerow(val)
-        w.close()
-
-        message = "Pipeline status: \t OK \nData recorded in valid_data.csv"
-        
     if x == 1:
         
         '''Randomize selection of sensor cluster with error in dataset. a is the sensor cluster with the error'''
@@ -51,9 +41,24 @@ def pipeline_cluster_data():
 
         pipelineData[a] = [a] + invalid_sensor_cluster_data()
 
-        '''Generate error code and record error details in error log'''
+    return pipelineData
 
-        for key, val in pipelineData.items():
+'''Function to check if pipeline data has any errors.'''
+
+def check_data(my_dict):
+
+    '''For valid data all 512 sensors must return  floats else data is corrupt'''
+    
+    if len(my_dict) ==32 and len(my_dict[32]) == 18 and my_dict[32][17] != "Err":
+        w= open("valid_data.csv", "a", newline='')
+        writer = csv.writer(w)
+        for key, val in my_dict.items():
+            writer.writerow(val)
+        message = "Pipeline status: \t OK \nData recorded in valid_data.csv"
+        w.close()
+     
+    else:
+        for key, val in my_dict.items():
             for i in range(0,len(val)):
                 if val[i] == "Err":
                     sensor_number = i-1
@@ -63,8 +68,9 @@ def pipeline_cluster_data():
                     
                     print(message1)
                     print(message2)
+                    error_log ={"log": [val[1], message1,message2]}
 
-                    error_log ={"log": [val[1], message1,message2]} 
+                    '''Write generated error code to error log'''
 
                     w= open("pipeline_sensors _error_log.csv", "a", newline='')
                     writer = csv.writer(w)
@@ -72,16 +78,15 @@ def pipeline_cluster_data():
                         writer.writerow(value) 
                     w.close()
 
-        '''Write invalid sensor values to csv file'''
+                    '''Write corrupt data to invalid data csv file '''
+                    
+                    w= open("invalid_data.csv", "a", newline='')
+                    writer = csv.writer(w)
+                    for key, val in my_dict.items():
+                        writer.writerow(val)
+                    w.close()
+                    message = "Pipeline status: \t DANGER!! \nData recorded in invalid_data.csv and pipeline_sensors _error_log.csv "
 
-        w= open("invalid_data.csv", "a", newline='')
-        writer = csv.writer(w)
-        for key, val in pipelineData.items():
-            writer.writerow(val)
-        w.close()
-        message = "Pipeline status: \t DANGER!! \nData recorded in invalid_data.csv and pipeline_sensors _error_log.csv "
-        
     return message
 
-print (pipeline_cluster_data())
-
+print (check_data(pipeline_cluster_data()))
